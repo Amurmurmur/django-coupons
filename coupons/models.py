@@ -61,7 +61,7 @@ class CouponManager(models.Manager):
         return self.filter(users__redeemed_at__isnull=True)
 
     def expired(self):
-        return self.filter(valid_until__lt=timezone.now())
+        return self.filter(valid_until__lt=timezone.localtime(timezone.now()))
 
 
 @python_2_unicode_compatible
@@ -73,6 +73,9 @@ class Coupon(models.Model):
     type = models.CharField(_("Type"), max_length=20)
     user_limit = models.PositiveIntegerField(_("User limit"), default=1)
     created_at = models.DateTimeField(_("Created at"), auto_now_add=True)
+    valid_from = models.DateTimeField(
+        _("Valid from"), blank=True, null=True,
+        help_text=_("Leave empty for coupons that never expire"))
     valid_until = models.DateTimeField(
         _("Valid until"), blank=True, null=True,
         help_text=_("Leave empty for coupons that never expire"))
@@ -95,7 +98,7 @@ class Coupon(models.Model):
         super(Coupon, self).save(*args, **kwargs)
 
     def expired(self):
-        return self.valid_until is not None and self.valid_until < timezone.now()
+        return self.valid_until is not None and self.valid_until < timezone.localtime(timezone.now())
 
     @property
     def is_redeemed(self):
@@ -129,7 +132,7 @@ class Coupon(models.Model):
                 coupon_user.user = user
             except CouponUser.DoesNotExist:
                 coupon_user = CouponUser(coupon=self, user=user)
-        coupon_user.redeemed_at = timezone.now()
+        coupon_user.redeemed_at = timezone.localtime(timezone.now())
         coupon_user.save()
         redeem_done.send(sender=self.__class__, coupon=self)
 
